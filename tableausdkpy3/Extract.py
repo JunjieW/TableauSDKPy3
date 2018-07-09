@@ -514,6 +514,8 @@ class Row(object):
            @param columnNumber The column number (zero-based) to set a value for.
            @param value The spatial value (as a charString).
         """
+        if type(value) is str:
+            value = value.encode('utf-8')
 
         result = extract_lib.TabRowSetSpatial(
         self._handle
