@@ -1,5 +1,5 @@
 .idea/
-*/DataExtract.log
-*/TableauSDKExtract.log
+*/DataExtract*.log
+*/TableauSDKExtract*.log
 */test_out.tde
 
