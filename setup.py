@@ -14,15 +14,16 @@ from distutils import log
 from distutils.core import setup
 from distutils.command.build_py import build_py
 from distutils.command.install_lib import install_lib
+from distutils.errors import DistutilsFileError
 import os
 import sys
 import shutil
 
 # Skip the version check when building the source dist; we can
 # patch things up later.
-if len(sys.argv) < 2 or sys.argv[1] != 'sdist':
-    if sys.version_info < (2, 6):
-        print('Python >= 2.6 required')
+if len(sys.argv) < 3 or sys.argv[1] != 'sdist':
+    if sys.version_info < (3, 4):
+        print('Python >= 3.4 required')
         exit(1)
 
 class build_with_libs(build_py):
@@ -118,14 +119,14 @@ else:
    raise RuntimeError('Unknown platform ' + sys.platform)
 
 setup(
-    name='TableauSDK',
+    name='TableauSDKPy3',
     cmdclass={'build_py' : build_with_libs, 'install_lib' : install_lib_with_links},
-    version='10300.18.0603.1943',
-    packages=['tableausdk'],
-    package_data={'tableausdk' : copy_list},
-    description="Tableau SDK package",
-    license='LICENSE.txt',
-    author='Tableau Software',
-    author_email='support@tableau.com',
+    version='0.1.0',
+    packages=['tableausdkpy3'],
+    package_data={'tableausdkpy3' : copy_list},
+    description="Tableau SDK package (Python 3)",
+    license='LICENSE.txt', # TODO: udpate license
+    author='Tableau Software', # Junjie Wei @ BAM
+    author_email='support@tableau.com', # Junjie Wei @ BAM
     url='http://www.tableausoftware.com/'
 )

@@ -1,4 +1,4 @@
-Tableau SDK
+Tableau SDK Py3
 
 Extract: create extract files for use with Tableau's fast Data Engine.
 Server : client library for Tableau Server Rest APIs.
@@ -6,7 +6,7 @@ Server : client library for Tableau Server Rest APIs.
 ================
 = Requirements =
 ================
-(*) Python 2.x with x >= 6
+(*) Python 3.x with x >= 4
 (*) The correct flavor (platform + architecture) version of this package.
 
 ================
