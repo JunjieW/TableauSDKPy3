@@ -20,6 +20,7 @@ class ExtractAndTypesTestCase(unittest.TestCase):
     def test_create_or_open_extract(self):
         """
         Create Extract (NOTE: This function assumes that the Tableau SDK Extract API is initialized)
+        The test data and schema is based on the official Tableau SDK python samples
         """
         try:
             # Create Extract Object
@@ -57,7 +58,8 @@ class ExtractAndTypesTestCase(unittest.TestCase):
 
     def test_populateExtract(self):
         """
-        Test creating all available types in an Tableau Extract, if None, default will be used
+        Test creating all available types in an Tableau Extract, if None, default will be used.
+        The test data and schema is based on the official Tableau SDK python samples.
         """
         try:
             extract = Extract(self.filename)
