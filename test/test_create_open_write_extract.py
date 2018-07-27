@@ -1,7 +1,7 @@
 import unittest
 
 from tableausdkpy3 import *
-from tableausdkpy3.Extract import *
+
 
 
 class ExtractAndTypesTestCase(unittest.TestCase):
