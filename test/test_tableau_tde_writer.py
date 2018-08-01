@@ -65,7 +65,7 @@ class PyTableauTdeWriterTestCase(unittest.TestCase):
         df = df[['StrColoumn', 'BytesColoumn', 'BytearrayColoumn', 'BoolColoumn', 'DateColoumn', 'TimeColoumn',
                      'IntColoumn', 'FloatColoumn', 'DecimalColoumn', 'UuidColoumn']]
         writter = TableauTdeWriter(out_path)
-        writter._init_schema(df, column_defs)
+        writter._init_schema(column_defs)
 
         col_def = writter.extract.openTable(TDE_TABLE_NAME).getTableDefinition()
 
@@ -75,6 +75,7 @@ class PyTableauTdeWriterTestCase(unittest.TestCase):
 
 
     def test_set_value(self):
+        # TODO:
         pass
 
     def test_write_df_to_tde(self):
@@ -124,6 +125,37 @@ class PyTableauTdeWriterTestCase(unittest.TestCase):
         writter.write_pandas_dataframe(df, column_defs)
 
 
+    def test_write_pyodbc_cursor_result_to_tde(self):
+        out_path = PyTableauTdeWriterTestCase.TED_OUTPUT_PATH
+
+        # clean up
+        if os.path.exists(out_path):
+            os.remove(out_path)
+
+
+        import pyodbc
+        server = 'rsk-db-uat'
+        db = 'Reporting'
+        conn_str = 'DRIVER={ODBC Driver 11 for SQL Server};SERVER=' + server + ';DATABASE=' + db + ';Trusted_Connection=yes'
+
+        conn = pyodbc.connect(conn_str, autocommit=True)
+        cursor = conn.cursor()
+
+        q = """
+            Select TOP 10 * From Reporting.rpt.v_RiskPositionsPNL With(NoLock) 
+            Where 
+                Reporting.rpt.v_RiskPositionsPNL.AsOfDate >= '2018-07-23' 
+                And Reporting.rpt.v_RiskPositionsPNL.AsOfDate < '2018-07-24'
+        """
+
+        writer = TableauTdeWriter(out_path)
+        cursor.execute(q)
+        writer.write_from_pyodbc_cursor(cursor)
+
+
+    def test_apppend_mode(self):
+        # TODO:
+        pass
 
 
 if __name__ == '__main__':
