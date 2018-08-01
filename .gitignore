@@ -3,4 +3,5 @@ build/
 */DataExtract*.log
 */TableauSDKExtract*.log
 */*.tde
-
+*/*.hyper
+hyper_db

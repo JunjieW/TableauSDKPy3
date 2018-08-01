@@ -3,7 +3,7 @@ import unittest
 from tableausdk2py3 import *
 
 
-class PyTableauHyperWriterTestCase(unittest.TestCase):
+class PyTableauTdeWriterTestCase(unittest.TestCase):
     TED_OUTPUT_PATH = 'tableau_hyper_writter_test_output.hyper'
 
     # def test_types_mapping(self):
@@ -27,7 +27,7 @@ class PyTableauHyperWriterTestCase(unittest.TestCase):
     #     self.assertEqual(mapping[type(UUID('12345678123456781234567812345678'))], TableauType.UNICODE_STRING)
 
     def test_init_schema(self):
-        out_path = PyTableauHyperWriterTestCase.TED_OUTPUT_PATH
+        out_path = PyTableauTdeWriterTestCase.TED_OUTPUT_PATH
 
         # clean up
         if os.path.exists(out_path):
@@ -65,7 +65,7 @@ class PyTableauHyperWriterTestCase(unittest.TestCase):
         df = df[['StrColoumn', 'BytesColoumn', 'BytearrayColoumn', 'BoolColoumn', 'DateColoumn', 'TimeColoumn',
                      'IntColoumn', 'FloatColoumn', 'DecimalColoumn', 'UuidColoumn']]
         writter = TableauHyperWriter(out_path)
-        writter._init_schema(df, column_defs)
+        writter._init_schema(column_defs)
 
         col_def = writter.extract.openTable(TDE_TABLE_NAME).getTableDefinition()
 
@@ -79,7 +79,7 @@ class PyTableauHyperWriterTestCase(unittest.TestCase):
         pass
 
     def test_write_df_to_tde(self):
-        out_path = PyTableauHyperWriterTestCase.TED_OUTPUT_PATH
+        out_path = PyTableauTdeWriterTestCase.TED_OUTPUT_PATH
 
         # clean up
         if os.path.exists(out_path):
@@ -125,6 +125,32 @@ class PyTableauHyperWriterTestCase(unittest.TestCase):
         writter.write_pandas_dataframe(df, column_defs)
 
 
+    def test_write_pyodbc_cursor_result_to_tde(self):
+        out_path = PyTableauTdeWriterTestCase.TED_OUTPUT_PATH
+
+        # clean up
+        if os.path.exists(out_path):
+            os.remove(out_path)
+
+
+        import pyodbc
+        server = 'xxx'
+        db = 'xxxxx'
+        conn_str = 'DRIVER={ODBC Driver 11 for SQL Server};SERVER=' + server + ';DATABASE=' + db + ';Trusted_Connection=yes'
+
+        conn = pyodbc.connect(conn_str, autocommit=True)
+        cursor = conn.cursor()
+
+        q = ''
+
+        writer = TableauHyperWriter(out_path)
+        cursor.execute(q)
+        writer.write_from_pyodbc_cursor(cursor)
+
+
+    def test_apppend_mode(self):
+        # TODO:
+        pass
 
 
 if __name__ == '__main__':

@@ -88,7 +88,7 @@ class TableauHyperWriter(object):
     #     ExtractAPI.cleanup()
 
 
-    def _init_schema(self, df, column_defs):
+    def _init_schema(self, column_defs):
         # TODO: if update to pandas >=0.21.0, can do type_infer if column_defs not specified
         schema = TableDefinition()
         for col in column_defs:
@@ -99,64 +99,63 @@ class TableauHyperWriter(object):
 
         self.extract.addTable(TDE_TABLE_NAME, schema)
 
-    def _set_value(self, row, df, ridx, cidx):
-        # set value by inferred type
+
+    def _set_value(self, tab_row, cidx, value):
         schema = self.extract.openTable(TDE_TABLE_NAME).getTableDefinition()
         col_type = schema.getColumnType(cidx)
-        value = df.iloc[ridx, cidx]
         # check None and NaN
         if pd.isnull(value):
-            row.setNull(cidx)
+            tab_row.setNull(cidx)
             return
 
         # TODO: make it more flexible when tableau types expand
         if col_type == TableauType.UNICODE_STRING:
-            row.setString(cidx, str(df.iloc[ridx, cidx]))
+            tab_row.setString(cidx, str(value))
         elif col_type == TableauType.CHAR_STRING:
-            row.setCharString(cidx, str(df.iloc[ridx, cidx]))
+            tab_row.setCharString(cidx, str(value))
         elif col_type == TableauType.BOOLEAN:
-            row.setBoolean(cidx, bool(df.iloc[ridx, cidx]))
+            tab_row.setBoolean(cidx, bool(value))
         elif col_type == TableauType.INTEGER:
             # TODO: shouldn't have done this to default to LongInteger
-            row.setLongInteger(cidx, int(df.iloc[ridx, cidx]))
+            tab_row.setLongInteger(cidx, int(value))
         elif col_type == TableauType.DOUBLE:
-            row.setDouble(cidx, float(df.iloc[ridx, cidx]))
+            tab_row.setDouble(cidx, float(value))
         elif col_type == TableauType.DATE:
-            dt = df.iloc[ridx, cidx]
+            dt = value
             if not isinstance(dt, datetime.date) and not isinstance(dt, datetime.datetime):
                 # raise TypeError('an datetime.date or datetime.datetime is required (got {})'.format(type(dt)))
                 dt = dateutil_parser.parse(dt)
-            row.setDate(cidx, dt.year, dt.month, dt.day)
+            tab_row.setDate(cidx, dt.year, dt.month, dt.day)
         elif col_type == TableauType.DATETIME:
-            dt = df.iloc[ridx, cidx]
+            dt = value
             if not isinstance(dt, datetime.datetime):
                 # raise TypeError('an datetime.datetime is required (got {})'.format(type(dt)))
                 dt = dateutil_parser.parse(dt)
             # TODO: WARNNING lost precision of micorsec when casting into fraction sec
-            row.setDateTime(cidx, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond // 100)
+            tab_row.setDateTime(cidx, dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second, dt.microsecond // 100)
         elif col_type == TableauType.SPATIAL:
-            # TODO:
-            # row.setSpatial(cidx, df.iloc[ridx, cidx])
+            # TODO: implement convert_to_spatial() to convert into Tableau Spatial object
+            # row.setSpatial(cidx, convert_to_spatial(value))
             raise NotImplementedError('To Implement')
         elif col_type == TableauType.DURATION:
-            td = datetime.timedelta(df.iloc[ridx, cidx])
+            td = datetime.timedelta(value)
             if not isinstance(td, datetime.timedelta):
                 raise TypeError('an datetime.timedelta is required (got {})'.format(type(td)))
             td_hours = td.seconds / 3600
             td_minutes = td.seconds % 3600 / 60
             td_sec = td.seconds % 60
             # TODO: WARNNING the micorsec precision get lost when casting into fraction sec
-            row.setDuration(cidx, td.days, td_hours, td_minutes, td_sec, td.microseconds // 100)
+            tab_row.setDuration(cidx, td.days, td_hours, td_minutes, td_sec, td.microseconds // 100)
 
 
-    def write_pandas_dataframe(self, df, column_defs):
+    def write_pandas_dataframe(self, df, column_defs, append=False):
         """
         Write a pandas DataFrame to Tableau Extract with column_defs to set up its schema
         :param df: pandas DataFrame
         :param column_defs: list of ExtractColumnDefinition objects
         """
         if not self.extract.hasTable(TDE_TABLE_NAME):
-            self._init_schema(df, column_defs)
+            self._init_schema(column_defs)
 
         table = self.extract.openTable(TDE_TABLE_NAME)
         schema = table.getTableDefinition()
@@ -166,17 +165,84 @@ class TableauHyperWriter(object):
             tab_row = Row(schema)
             for j in range(df_row.count()):
                 try:
-                    self._set_value(tab_row, df, i, j)
+                    value = df.iloc[i, j]
+                    self._set_value(tab_row, j, value)
                 except Exception as ex:
                     # TODO: log.ERROR(ridx, cidx, column type, column name)
-                    print('ridx={}, cidx={}, colname={}, coltype={}, value={}, valuetype={}',
-                          i, j, schema.getColumnType(j), schema.getColumnName(j), df.iloc[i, j], type(df.iloc[i, j]))
+                    print('ridx={}, cidx={}, colname={}, coltype={}, value={}, valuetype={}'.format(
+                          i, j, schema.getColumnType(j), schema.getColumnName(j), df.iloc[i, j], type(df.iloc[i, j])))
                     raise ex
             table.insert(tab_row)
             tab_row.__del__()
 
         self.extract.close()
         ExtractAPI.cleanup()
+
+
+    def write_from_pyodbc_cursor(self, cursor, append=False):
+        """
+        Write data from the result of executing query by pyodbc cursor. It's the caller's responsibility
+        to release the cursor passed in.
+        NOTE: to be able to parse date, datetime type from SQL correctly, the connection of cursor should use explicitly
+              use SQLServer Native Client or ODBC Driver. See: https://stackoverflow.com/a/7196251/9195736
+        :param cursor: a DB cursor can
+        :param query:
+        :return: void
+        """
+        import pyodbc
+        if type(cursor) is not pyodbc.Cursor:
+            raise ArgumentError(
+                'Expecting cursor is not an object of {} but {}.'.format(pyodbc.Cursor, type(cursor)))
+
+        row = cursor.fetchone()
+        db_col_name_in_order = [a_col_tuple[0] for a_col_tuple in row.cursor_description]
+
+        if not self.extract.hasTable(TDE_TABLE_NAME):
+            colname_pytype_map = {item[0]: item[1] for item in list(cursor.description)}
+            column_defs = []
+            for col_name in db_col_name_in_order:
+                tab_col_type = PYODBC_TDE_TYPE_MAPPING[colname_pytype_map[col_name]]
+                extract_col_def = ExtractColumnDefinition(name=col_name, type=tab_col_type)
+                column_defs.append(extract_col_def)
+            self._init_schema(column_defs)
+
+        # TODO: if append mode, check if the column definition matched
+
+        if not row:
+            # TODO: logger.warning('query return empty result, no data written')
+            return
+
+        # TODO: check auto commit
+        # if not cursor.connection.autocommit:
+        #     cursor.commit()
+
+        table = self.extract.openTable(TDE_TABLE_NAME)
+        schema = table.getTableDefinition()
+        row_idx = -1
+        while row:
+            tab_row = Row(schema)
+            row_idx += 1
+            for col_idx in range(len(row)):
+                try:
+                    cell_value = row[col_idx]
+                    self._set_value(tab_row, col_idx, cell_value)
+                except Exception as ex:
+                    # TODO: log.ERROR(...)
+                    print('ridx={}, cidx={}, colname={}, coltype={}, value={}, valuetype={}'.format(
+                        row_idx, col_idx, schema.getColumnName(col_idx), schema.getColumnType(col_idx), cell_value, type(cell_value)
+                    ))
+                    raise ex
+            table.insert(tab_row)
+
+            # TODO: check if Tableau API releases the row object by GC or until Extact close()
+            #       if it's necessary to wait until Extract closed, we can save memory by manually release it
+            # tab_row.__del__()
+
+            row = cursor.fetchone()
+
+        self.extract.close()
+        ExtractAPI.cleanup()
+
 
 
 # class TableauTdeReader(object):
