@@ -134,19 +134,14 @@ class PyTableauTdeWriterTestCase(unittest.TestCase):
 
 
         import pyodbc
-        server = 'rsk-db-uat'
-        db = 'Reporting'
+        server = ''
+        db = ''
         conn_str = 'DRIVER={ODBC Driver 11 for SQL Server};SERVER=' + server + ';DATABASE=' + db + ';Trusted_Connection=yes'
 
         conn = pyodbc.connect(conn_str, autocommit=True)
         cursor = conn.cursor()
 
-        q = """
-            Select TOP 10 * From Reporting.rpt.v_RiskPositionsPNL With(NoLock) 
-            Where 
-                Reporting.rpt.v_RiskPositionsPNL.AsOfDate >= '2018-07-23' 
-                And Reporting.rpt.v_RiskPositionsPNL.AsOfDate < '2018-07-24'
-        """
+        q = ''
 
         writer = TableauTdeWriter(out_path)
         cursor.execute(q)
