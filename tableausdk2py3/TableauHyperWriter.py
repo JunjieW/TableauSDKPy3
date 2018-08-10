@@ -98,11 +98,19 @@ class TableauHyperWriter(object):
                 schema.addColumnWithCollation(col.name, col.type, col.collation)
 
         self.extract.addTable(TDE_TABLE_NAME, schema)
+        self.schema = schema
 
 
     def _set_value(self, tab_row, cidx, value):
-        schema = self.extract.openTable(TDE_TABLE_NAME).getTableDefinition()
-        col_type = schema.getColumnType(cidx)
+        """
+        Set value at column with index cidx  in a Tableau Row object.
+        :param tab_row: Tableau Row object
+        :param cidx: the column index, zero based
+        :param value: the value to set
+        :return: void
+        """
+        # schema = self.extract.openTable(TDE_TABLE_NAME).getTableDefinition()
+        col_type = self.schema.getColumnType(cidx)
         # check None and NaN
         if pd.isnull(value):
             tab_row.setNull(cidx)
@@ -159,6 +167,9 @@ class TableauHyperWriter(object):
 
         table = self.extract.openTable(TDE_TABLE_NAME)
         schema = table.getTableDefinition()
+
+        if not self.schema:
+            self.schema = schema
 
 
         for i, df_row in df.iterrows():
@@ -218,9 +229,13 @@ class TableauHyperWriter(object):
 
         table = self.extract.openTable(TDE_TABLE_NAME)
         schema = table.getTableDefinition()
+
+        if not self.schema:
+            self.schema = schema
+
         row_idx = -1
         while row:
-            tab_row = Row(schema)
+            tab_row = Row(self.schema)
             row_idx += 1
             for col_idx in range(len(row)):
                 try:
@@ -245,7 +260,7 @@ class TableauHyperWriter(object):
 
 
 
-# class TableauTdeReader(object):
+# class TableauHyperReader(object):
 #     def __init__(self, path):
 #         pass
 #
