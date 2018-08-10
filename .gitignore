@@ -5,3 +5,4 @@ build/
 */*.tde
 */*.hyper
 hyper_db
+*.pyc
