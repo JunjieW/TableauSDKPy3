@@ -88,15 +88,15 @@ from tableausdk2py3 import *
 ############################################
 
 OUTPUT = 'test.hyper'
-server = 'rsk-db-uat'
-db = 'Reporting'
+server = '<the_db_server_name>'
+db = '<the_db_name>'
 
 # NOTE: Make sure to use ODBC Driver instead of "SQL Server", otherwise pyodbc will convert SQL datetime/date into str
 conn_str = 'DRIVER={ODBC Driver 11 for SQL Server};SERVER=' + server + ';DATABASE=' + db + ';Trusted_Connection=yes'
 
 conn = pyodbc.connect(conn_str , autocommit=True)
 cursor = conn.cursor()
-q = "SELECT TABLE_NAME FROM Reporting.INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
+q = "SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE'"
 cursor.execute(q)
 
 hyper_writer = TableauHyperWriter(OUTPUT)
